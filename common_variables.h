@@ -14,4 +14,9 @@
 // TCP port for Server M <-> clients
 #define PORT_SERVER_M_TCP (45000 + USC_ID_SUFFIX)
 
+// Common message strings
+#define MSG_AUTH_GRANTED "GRANTED"
+#define MSG_AUTH_DENIED  "DENIED"
+#define MSG_PASSWORD_MASK "******"
+
 #endif

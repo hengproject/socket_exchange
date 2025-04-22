@@ -4,7 +4,7 @@ CXXFLAGS = -Wall -std=c++11
 
 all: serverM
 
-serverM: serverM.cpp common_variables.h serverM.h
+serverM: serverM.cpp serverM.h common_variables.h common_sockets.h
 	$(CXX) $(CXXFLAGS) -o serverM serverM.cpp
 
 serverA: serverA.cpp common_variables.h serverA.h
@@ -16,7 +16,7 @@ serverP: serverP.cpp common_variables.h serverP.h
 serverQ: serverQ.cpp common_variables.h serverQ.h
 	$(CXX) $(CXXFLAGS) -o serverQ serverQ.cpp
 
-client: client.cpp common_variables.h client.h
+client: client.cpp client.h common_variables.h common_sockets.h
 	$(CXX) $(CXXFLAGS) -o client client.cpp
 
 run_client: client
