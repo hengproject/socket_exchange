@@ -12,7 +12,8 @@ just name your code files and briefly mention what they do).
 common_variables.h: ruled static ports #
 serverM: demon server, 
 serverA: load credential from file,
-serverP: load portfolio
+serverP: load portfolio from file
+serverQ: load quote from file
 
 e. The format of all the messages exchanged, e.g., username and password are concatenated and delimited
 by a comma, etc.   
