@@ -27,9 +27,37 @@ client: login
 
 e. The format of all the messages exchanged, e.g., username and password are concatenated and delimited
 by a comma, etc.   
-login message data: `${username},${password}`
-login passed: 'Granted'
-login failed: 'DENIED'
+
+##### login
+```
+Client -> ServerM : username,password
+ServerM -> ServerA : username,encrypted_password
+ServerA -> ServerM : GRANTED / DENIED
+ServerM -> Client : GRANTED / DENIED
+```
+##### quote
+```
+Client -> ServerM : quote OR Client -> ServerM : quote S1
+ServerM -> ServerQ : quote OR ServerM -> ServerQ : quote S1
+ServerQ -> ServerM : S1 102.5, S2 199.0 OR ServerQ -> ServerM : S1 102.5
+ServerM -> Client : S1 102.5, S2 199.0 OR ServerQ -> ServerM : S1 102.5
+```
+##### BUY
+```
+Client -> ServerM : buy S1 10
+ServerM -> ServerQ : quote S1
+ServerQ -> ServerM : S1 102.5
+ServerM -> ServerP : buy James S1 10 102.5
+ServerM -> ServerQ : advance S1
+ServerM -> Client : [Server M] Purchase completed.
+```
+
+
+
+
+
+
+
 
 
 f. Any idiosyncrasy of your project. It should specify under what conditions the project fails, if any.

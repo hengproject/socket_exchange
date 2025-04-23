@@ -74,7 +74,7 @@ void enter_command_loop(int sockfd) {
         }
 
         std::cout << client::MSG_RECEIVED_REPLY << std::endl;
-        std::cout << reply.value() << std::endl;
+        std::cout << "[Client] ServerM response: " << reply.value() << std::endl;
         std::cout << "----- Start a new request -----" << std::endl;
     }
 }

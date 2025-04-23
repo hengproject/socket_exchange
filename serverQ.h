@@ -10,9 +10,6 @@ namespace serverQ {
     const std::string BOOTUP_MESSAGE       = "[Server Q] Booting up using UDP on port ";
     const std::string QUOTE_FILE           = "quotes.txt";
 
-    // Command keywords
-    const std::string CMD_QUOTE            = "quote";
-
     // Response strings
     const std::string RESP_UNKNOWN_COMMAND = "[Server Q] Unknown command.\n";
     const std::string RESP_UNKNOWN_STOCK   = "[Server Q] Unknown stock: ";
@@ -28,6 +25,9 @@ namespace serverQ {
 
         double current_price() const {
             return prices[current_index];
+        }
+        void advance() {
+            current_index = (current_index + 1) % prices.size();
         }
     };
 

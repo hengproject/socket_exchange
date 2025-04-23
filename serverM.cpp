@@ -137,7 +137,10 @@ void serverM::handle_phase3_commands(int client_fd, int udp_sock,const std::stri
             udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
 
             // Step 4: 回复 client
-            tcp_send_string(client_fd, MSG_BUY_SUCCESS);
+            std::ostringstream response;
+            response << "OK buy " << stock << " " << quantity << " at " << price;
+            tcp_send_string(client_fd, response.str());
+
         }
         else {
             tcp_send_string(client_fd, MSG_UNKNOWN_COMMAND);
