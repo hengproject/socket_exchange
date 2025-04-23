@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <iostream>
+#include "common_variables.h"
 
 // GPT generated code, see README.md
 // C++11 does not support Optional
@@ -64,7 +65,7 @@ inline int create_tcp_server_socket(const std::string& ip, int port) {
     }
 
     // 开始监听连接请求
-    if (listen(sockfd, 5) < 0) {
+    if (listen(sockfd, MAX_PENDING_CLIENTS) < 0) {
         perror("listen");
         close(sockfd);
         exit(1);

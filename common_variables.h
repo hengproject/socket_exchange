@@ -5,6 +5,8 @@
 #define LOCALHOST "127.0.0.1"
 #define USC_ID_SUFFIX 684
 
+#define MAX_PENDING_CLIENTS 20
+
 // UDP ports for backend servers
 #define PORT_SERVER_A (41000 + USC_ID_SUFFIX)
 #define PORT_SERVER_P (42000 + USC_ID_SUFFIX)

@@ -12,6 +12,12 @@ namespace client {
     const std::string PROMPT_PASSWORD     = "Please enter the password: ";
     const std::string CONNECTION_ERROR    = "[Client] Connection closed or failed.";
 
+    const std::string PROMPT_COMMAND      = "[Client] Please enter the command:\n> ";
+
+    const std::string MSG_SENT_COMMAND    = "[Client] Sent command to the main server.";
+    const std::string MSG_RECEIVED_REPLY  = "[Client] Received the response from the main server using TCP.";
+
+    const std::string MSG_GOODBYE         = "[Client] Exiting.";
 }
 
 #endif

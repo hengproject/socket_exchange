@@ -11,13 +11,16 @@ Phase2:
         A: client prompt and tcp buffering,send
         B: serverM tcp get username and password from client
            serverM udp forward username + encrypted password to server A
+Phase3:
+        client create a loop to emit commands til exit or failed
+        server M check auth and forward to 
                     
 d. What your code files are and what each one of them does. (Please do not repeat the project description;
 just name your code files and briefly mention what they do).   
 common_variables.h: ruled static ports #
 comon_sockets.h: create & bind tcp/udp sockets
-serverM: demon server, 
-serverA: load credential from file,
+serverM: demon server, get login data then encrypt them and forward to A
+serverA: load credential from file, validate credential
 serverP: load portfolio from file
 serverQ: load quote from file
 client: login
@@ -25,11 +28,14 @@ client: login
 e. The format of all the messages exchanged, e.g., username and password are concatenated and delimited
 by a comma, etc.   
 login message data: `${username},${password}`
+login passed: 'Granted'
+login failed: 'DENIED'
 
 
 f. Any idiosyncrasy of your project. It should specify under what conditions the project fails, if any.
 1. servers are not started as assigned order
 2. during services, any of the services is down(serverM will wait forever if serverA is down)
+3. over ${MAX_PENDING_CLIENTS} attempt to connect serverM during a time period (default set to 20).Defined in common variables.h, mutable
 
 
 g. Reused Code: Did you use code from anywhere for your project? If not, say so. If so, state what
