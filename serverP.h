@@ -8,17 +8,18 @@
 
 namespace serverP {
     const std::string BOOTUP_MESSAGE = "[Server P] Booting up using UDP on port ";
+    const std::string PORTFOLIO_FILE = "portfolios.txt";
 
     struct StockHolding {
-        std::string stockName;
-        int shares;
-        double avgBuyPrice;
+        std::string stock;
+        int quantity = 0;
+        double avg_price = 0.0;
     };
 
-    using Portfolio = std::vector<StockHolding>;
-    using PortfolioMap = std::unordered_map<std::string, Portfolio>;
+    using Portfolio = std::unordered_map<std::string, StockHolding>;  // stock → 持仓
+    using UserMap = std::unordered_map<std::string, Portfolio>;       // user → portfolio
 
-    PortfolioMap loadPortfolios(const std::string& filename);
+    UserMap loadPortfolios(const std::string& filename);
 }
 
 #endif

@@ -68,14 +68,14 @@ void serverM::handle_single_client(int client_fd, int udp_sock) {
 
     if (authResult == MSG_AUTH_GRANTED) {
         // 登录成功后进入 Phase 3 命令循环
-        handle_phase3_commands(client_fd, udp_sock);
+        handle_phase3_commands(client_fd, udp_sock,username);
     }
 
     close(client_fd);
 }
 
 // Phase 3 命令分发
-void serverM::handle_phase3_commands(int client_fd, int udp_sock) {
+void serverM::handle_phase3_commands(int client_fd, int udp_sock,const std::string& username) {
     while (true) {
         Optional<std::string> cmd = tcp_recv_string(client_fd);
         if (!cmd.has_value()) {
@@ -130,7 +130,7 @@ void serverM::handle_phase3_commands(int client_fd, int udp_sock) {
 
             // Step 2: 更新 serverP
             std::ostringstream msg_to_P;
-            msg_to_P << "buy " << stock << " " << quantity << " " << price;
+            msg_to_P << "buy " << username << " " << stock << " " << quantity << " " << price;
             udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
 
             // Step 3: 通知 serverQ 推进价格

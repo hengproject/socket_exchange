@@ -3,64 +3,77 @@
 #include <sstream>
 #include <unistd.h>
 #include "serverP.h"
+#include "common_sockets.h"
 
 using namespace serverP;
 
-PortfolioMap serverP::loadPortfolios(const std::string& filename) {
-    PortfolioMap portfolios;
+// 从文件加载所有用户的 portfolio
+UserMap serverP::loadPortfolios(const std::string& filename) {
+    UserMap data;
     std::ifstream infile(filename);
     std::string line;
     std::string currentUser;
 
     while (std::getline(infile, line)) {
-        // 去除左右空格
-        line.erase(0, line.find_first_not_of(" \t\r\n"));
-        line.erase(line.find_last_not_of(" \t\r\n") + 1);
-
-        if (line.empty()) continue;  // 跳过空行
-
         std::istringstream iss(line);
-        std::vector<std::string> tokens;
         std::string token;
-        while (iss >> token) {
-            tokens.push_back(token);
-        }
+        iss >> token;
 
-        if (tokens.size() == 1) {
-            // 是用户名行
-            currentUser = tokens[0];
-            portfolios[currentUser] = Portfolio();
-        } else if (tokens.size() == 3) {
-            // 是股票记录行
-            if (currentUser.empty()) {
-                std::cerr << "[Server P] Error: Stock line before username." << std::endl;
-                continue;
-            }
-            StockHolding holding;
-            holding.stockName = tokens[0];
-            holding.shares = std::stoi(tokens[1]);
-            holding.avgBuyPrice = std::stod(tokens[2]);
-            portfolios[currentUser].push_back(holding);
+        if (iss.eof()) {
+            // 用户名行
+            currentUser = token;
+            data[currentUser] = Portfolio();
         } else {
-            std::cerr << "[Server P] Warning: Invalid line: " << line << std::endl;
+            // 股票持仓行
+            StockHolding holding;
+            holding.stock = token;
+            iss >> holding.quantity >> holding.avg_price;
+            data[currentUser][holding.stock] = holding;
         }
     }
 
-    return portfolios;
+    return data;
 }
-
 
 int main() {
     std::cout << BOOTUP_MESSAGE << PORT_SERVER_P << "." << std::endl;
 
-    PortfolioMap data = loadPortfolios("portfolios.txt");
-    // Phase 1 debugging
-    //std::cout << "[Server P] Loaded portfolios for " << data.size() << " users from portfolios.txt" << std::endl;
-    //std::cout <<data["James"][0].stockName<<data["James"][0].shares <<data["James"][0].avgBuyPrice  <<std::endl;
-
+    UserMap portfolios = loadPortfolios(PORTFOLIO_FILE);
+    int udp_sock = create_udp_server_socket(LOCALHOST, PORT_SERVER_P);
 
     while (true) {
-        sleep(1);
+        Optional<std::string> request = udp_recv_string(udp_sock);
+        if (!request.has_value()) continue;
+
+        std::string cmd = request.value();
+        std::istringstream iss(cmd);
+        std::string action, username, stock;
+        int quantity;
+        double price;
+
+        iss >> action >> username >> stock >> quantity >> price;
+
+        if (action != "buy" || username.empty() || stock.empty() || quantity <= 0 || price <= 0.0) {
+            std::cerr << "[Server P] Invalid request: " << cmd << std::endl;
+            continue;
+        }
+
+        // 更新用户持仓
+        auto& user_port = portfolios[username];
+        auto& holding = user_port[stock];
+
+        if (holding.quantity > 0) {
+            double total_value = holding.avg_price * holding.quantity + price * quantity;
+            holding.quantity += quantity;
+            holding.avg_price = total_value / holding.quantity;
+        } else {
+            holding.stock = stock;
+            holding.quantity = quantity;
+            holding.avg_price = price;
+        }
+
+        std::cout << "[Server P] Updated " << username << ": "
+                  << stock << " " << holding.quantity << " shares at avg $" << holding.avg_price << std::endl;
     }
 
     return 0;

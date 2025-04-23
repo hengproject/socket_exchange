@@ -27,7 +27,7 @@ namespace serverM {
 
     std::string encryptPassword(const std::string& password);
     void handle_single_client(int client_fd, int udp_sock);
-    void handle_phase3_commands(int client_fd, int udp_sock);
+    void handle_phase3_commands(int client_fd, int udp_sock,const std::string& username);
 }
 
 #endif
