@@ -156,7 +156,7 @@ int main() {
 
     portfolios = loadPortfolios(PORTFOLIO_FILE);
 
-    //printPortfolios(portfolios);
+    printPortfolios(portfolios);
     int udp_sock = create_udp_server_socket(LOCALHOST, PORT_SERVER_P);
 
     while (true) {
@@ -200,7 +200,6 @@ int main() {
         } else if (action == "position") {
             iss >> username;
             handle_position(username, udp_sock);
-
         } else {
             std::cerr << "[Server P] Unknown command: " << request.value() << std::endl;
         }

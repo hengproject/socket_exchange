@@ -11,6 +11,8 @@
 #include "common_sockets.h"
 #include "client.h"
 
+std::string username;
+int sockfd;
 void enter_command_loop(int sockfd,const std::string& username);
 bool confirm_YN(const std::string& prompt);
 
@@ -47,13 +49,36 @@ void PositionResponseHandler(const std::string& status, const std::string& conte
 }
 
 void BuyResponseHandler(const std::string& status, const std::string& content) {
-    return;
+    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
+
+    if (status == "ERROR") {
+        if (content.empty()) {
+            std::cout << "[Client] Buy request denied by the user." << std::endl;
+            std::cout << "---Start a new request---" << std::endl;
+        } else {
+            std::cout << "[Client] " << content << " does not exist. Please check again." << std::endl;
+        }
+    }
+    else if (status == "CONFIRM") {
+        size_t comma = content.find(',');
+        std::string stock = content.substr(0, comma);
+        std::string price = content.substr(comma + 1);
+        std::cout << "[Client] " << stock << "'s current price is " << price << ". Proceed to buy? (Y/N)" << std::endl;
+	}
+    else if (status == "OK") {
+        size_t first = content.find(',');
+        size_t second = content.find(',', first + 1);
+        std::string stock = content.substr(0, first);
+        std::string price = content.substr(first + 1, second - first - 1);
+        std::string shares = content.substr(second + 1);
+        std::cout << "[Client] " << username << " successfully bought "<< shares <<" shares of " << stock << "." << std::endl;
+        std::cout << "---Start a new request---" << std::endl;
+    }
 }
 
 void SellResponseHandler(const std::string& status, const std::string& content) {
 	return;
 }
-
 // 这是你要的 router
 void HandleServerReply(const std::string& type, const std::string& status, const std::string& content) {
     if (type == "QUOTE") {
@@ -73,7 +98,7 @@ int main() {
     std::cout << client::BOOTUP_MESSAGE << std::endl;
 
     // create tcp client socket
-    int sockfd = create_tcp_client_socket(LOCALHOST, PORT_SERVER_M_TCP);
+    sockfd = create_tcp_client_socket(LOCALHOST, PORT_SERVER_M_TCP);
 
     std::cout << client::LOGIN_PROMPT << std::endl;
 
@@ -95,7 +120,7 @@ int main() {
        //}
 
        //std::string message = username + "," + password;
-        std::string username="*";
+        username="*";
         std::string message = "*,*";
         tcp_send_string(sockfd, message);
 
@@ -120,6 +145,21 @@ int main() {
 }
 
 
+bool validateInput(const std::string& input) {
+	auto ok = true;
+    if (input.find("buy ") == 0) {
+        size_t firstSpace = input.find(' ');
+        size_t secondSpace = input.find(' ', firstSpace + 1);
+        size_t thirdSpace = input.find(' ', secondSpace + 1);
+
+         ok = (firstSpace != std::string::npos &&
+                secondSpace != std::string::npos &&
+                thirdSpace == std::string::npos);
+		if(!ok){std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to buy." << std::endl;}
+    }
+    return ok; // 其他指令一律合法
+}
+
 
 void enter_command_loop(int sockfd, const std::string& username) {
     while (true) {
@@ -131,8 +171,12 @@ void enter_command_loop(int sockfd, const std::string& username) {
             std::cout << client::MSG_GOODBYE << std::endl;
             break;
         }
-
-        tcp_send_string(sockfd, command);
+		if (validateInput(command)){
+        	tcp_send_string(sockfd, command);
+		}else{
+			std::cout << "----- Start a new request -----" << std::endl;
+			continue;
+		}
         std::cout << client::MSG_SENT_COMMAND << std::endl;
 
         Optional<std::string> reply = tcp_recv_string(sockfd);
@@ -143,8 +187,9 @@ void enter_command_loop(int sockfd, const std::string& username) {
 
         std::string server_reply = reply.value();
         std::cout << client::MSG_RECEIVED_REPLY_WITHOUT_PORT << PORT_SERVER_M_TCP << "." << std::endl;
-		std::cout << server_reply << std::endl;
-
+		//std::cout << server_reply << std::endl;
+		auto message = parseMessage(server_reply);
+		HandleServerReply(std::get<0>(message),std::get<1>(message),std::get<2>(message));
         std::cout << "----- Start a new request -----" << std::endl;
     }
 }

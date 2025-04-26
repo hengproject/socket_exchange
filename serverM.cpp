@@ -109,14 +109,57 @@ void handleQuote(int client_fd, int udp_sock,const std::string& stockName) {
 	response << "QUOTE,";
 	if (!quote_result.has_value()) {
         std::cerr << MSG_FAILED_GET_QUOTE << std::endl;
-		response <<"ERR,"<<stockName;
+		response <<"ERROR,"<<stockName;
     } else {
 		response <<"OK,"<<quote_result.value();
     }
-	tcp_send_string(client_fd, quote_result.value());
+	tcp_send_string(client_fd, response.str());
     std::cout << AFTER_FORWARD_TO_CLIENT <<std::endl;
 }
 
+void handleBuy(int client_fd, int udp_sock, const std::string& stockName, int shares) {
+    // std::cout << stockName << std::endl;
+	if (stockName.empty() || shares <= 0) {
+    	tcp_send_string(client_fd, MSG_BUY_INVALID);
+    	return;
+    }
+	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stockName);
+    Optional<std::string> price_resp = udp_recv_string(udp_sock);
+    if (!price_resp.has_value()) {
+        tcp_send_string(client_fd, MSG_BUY_PRICE_FAIL);
+        return;
+    }
+	std::istringstream iss(price_resp.value());
+	std::string stock_reply;
+	double price = -1.0;
+	if (!(iss >> stock_reply >> price) || stock_reply != stockName || price <= 0.0) {
+         tcp_send_string(client_fd, "BUY,ERROR,"+stockName);
+         return;
+	}
+	//confirm
+	tcp_send_string(client_fd, "BUY,CONFIRM,"+stockName+","+std::to_string(price));
+	auto maybe_msg = tcp_recv_string(client_fd);
+    if (!maybe_msg.has_value()) {
+        close(client_fd);
+        return;
+    }
+    std::string confirm = maybe_msg.value();
+	std::ostringstream final_response;
+	if (confirm == "Y") {
+		std::ostringstream msg_to_P;
+    	msg_to_P << "buy " << client_fd_to_user[client_fd] << " " << stockName << " " << shares << " " << price;
+    	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
+		udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stockName);
+    	std::cout << "[Server M] Sent a time forward request for "<<stockName<<"." << std::endl;
+		final_response <<"BUY,OK,"<<stockName<<","<<price<<","<<shares;
+	}else{
+		final_response <<"BUY,ERR";
+	}
+
+
+	// final response
+ 	tcp_send_string(client_fd, final_response.str());
+}
 
 // 封装：处理 buy 请求
 void serverM::handle_buy_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity) {
@@ -309,13 +352,16 @@ void serverM::handle_phase3_commands(int client_fd, int udp_sock, const std::str
         if (new_command == "quote") {
         	if (arg1.empty()) handleQuote(client_fd, udp_sock, "ALL");
         	else handleQuote(client_fd, udp_sock, arg1);
-        } else if (command.substr(0, 3) == "buy") {
-            std::istringstream iss(command);
-            std::string cmd, stock;
-            int quantity;
-            iss >> cmd >> stock >> quantity;
-            handle_buy_command(client_fd, udp_sock, username, stock, quantity);
-        } else if (command.substr(0, 4) == "sell") {
+        }else if (new_command == "buy") {
+        	if (!arg1.empty() && !arg2.empty()) handleBuy(client_fd, udp_sock,arg1, std::stoi(arg2));
+    	}
+		//else if (command.substr(0, 3) == "buy") {
+        //    std::istringstream iss(command);
+        //    std::string cmd, stock;
+        //    int quantity;
+        //    iss >> cmd >> stock >> quantity;
+        //     handle_buy_command(client_fd, udp_sock, username, stock, quantity);}
+         else if (command.substr(0, 4) == "sell") {
             std::istringstream iss(command);
             std::string cmd, stock;
             int quantity;

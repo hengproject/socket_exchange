@@ -77,7 +77,14 @@ else User denies (N)
     end
 
 ```
+```
+Input not complete:client locally ret
+Quote fail->stock not found:BUY,ERR
+stock found & confirm: BUY,CONFIRM,stock,price
+stock confirmed:BUY,OK,stock,price,share
+```
 
+-------------
 ##### SELL
 ```
 Client->>ServerM: sell S1 10
