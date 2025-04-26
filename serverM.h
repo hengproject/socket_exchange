@@ -3,8 +3,11 @@
 
 #include "common_variables.h"
 #include <string>
+#include <unordered_map>
 
 namespace serverM {
+    extern std::unordered_map<int, std::string> client_fd_to_user;
+
     const std::string BOOTUP_MESSAGE          = "[Server M] Booting up using UDP on port ";
     const std::string TCP_LISTEN_MESSAGE      = "[Server M] Listening for clients on TCP port ";
 
@@ -25,9 +28,25 @@ namespace serverM {
     const std::string MSG_BUY_PRICE_FAIL = "[Server M] Failed to get price from Server Q.";
 
 
+    const std::string AFTER_FORWARD_TO_Q = "[Server M] Forwarded the quote request to server Q.";
+    const std::string AFTER_FORWARD_TO_CLIENT = "[Server M] Forwarded the quote response to the client.";
+
+
+
+
     std::string encryptPassword(const std::string& password);
+
+    // 核心流程处理函数
     void handle_single_client(int client_fd, int udp_sock);
-    void handle_phase3_commands(int client_fd, int udp_sock,const std::string& username);
+    void handle_phase3_commands(int client_fd, int udp_sock, const std::string& username);
+
+    // 指令处理封装函数
+    void handle_quote_command(int client_fd, int udp_sock, const std::string& command);
+    void handle_buy_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity);
+    void handle_sell_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity);
+    void handle_position_command(int client_fd, int udp_sock, const std::string& username);
+
+
 }
 
 #endif

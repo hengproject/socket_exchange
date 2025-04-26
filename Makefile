@@ -1,8 +1,10 @@
 CXX = g++
 CXXFLAGS = -Wall -std=c++11
 
+TARGETS = serverM serverA serverP serverQ client
 
-all: serverM
+all: $(TARGETS)
+
 
 serverM: serverM.cpp serverM.h common_variables.h common_sockets.h
 	$(CXX) $(CXXFLAGS) -o serverM serverM.cpp
@@ -38,5 +40,5 @@ run_serverM: serverM
 	./serverM
 
 clean:
-	rm -f serverM
+	rm -f $(TARGETS)
 

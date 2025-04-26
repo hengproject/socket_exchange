@@ -30,35 +30,82 @@ by a comma, etc.
 
 ##### login
 ```
-Client -> ServerM : username,password
-ServerM -> ServerA : username,encrypted_password
-ServerA -> ServerM : GRANTED / DENIED
-ServerM -> Client : GRANTED / DENIED
+Client
+  ↓ TCP: username,password
+ServerM
+  ↓ UDP: username,encrypted_password
+ServerA
+  ↓ UDP: GRANTED / DENIED
+ServerM
+  ↓ TCP: GRANTED / DENIED
+Client
 ```
 ##### quote
 ```
-Client -> ServerM : quote OR Client -> ServerM : quote S1
-ServerM -> ServerQ : quote OR ServerM -> ServerQ : quote S1
-ServerQ -> ServerM : S1 102.5, S2 199.0 OR ServerQ -> ServerM : S1 102.5
-ServerM -> Client : S1 102.5, S2 199.0 OR ServerQ -> ServerM : S1 102.5
+Client
+  ↓ TCP: quote S1
+ServerM
+  ↓ UDP: quote S1
+ServerQ
+  ↓ UDP: S1 102.5
+ServerM
+  ↓ TCP: S1 102.5
+Client
 ```
 ##### BUY
 ```
-Client -> ServerM : buy S1 10
-ServerM -> ServerQ : quote S1
-ServerQ -> ServerM : S1 102.5
-ServerM -> ServerP : buy James S1 10 102.5
-ServerM -> ServerQ : advance S1
-ServerM -> Client : [Server M] Purchase completed.
+
+Client->>ServerM: buy S1 10
+ServerM->>ServerQ: quote S1
+ServerQ-->>ServerM: S1 102.5
+ServerM-->>Client: CONFIRM buy S1 10 at 102.5
+Client-->>ServerM: Y   or   N
+
+alt User confirms (Y)
+    ServerM->>ServerP: buy James S1 10 102.5
+    ServerP-->>ServerM: OK buy S1 <new_qty> at avg <new_avg>
+    ServerM->>ServerQ: advance S1
+    ServerM-->>Client: OK buy S1 10 at 102.5
+else User denies (N)
+    ServerM-->>Client: ERR buy denied by user
+    end
+
 ```
 
+##### SELL
+```
+Client->>ServerM: sell S1 10
+ServerM->>ServerQ: quote S1
+ServerQ-->>ServerM: S1 103.0
+ServerM->>ServerP: check James S1 10
+ServerP-->>ServerM: OK
+ServerM-->>Client: CONFIRM sell S1 10 at 103.0
+Client-->>ServerM: Y   or   N
+
+alt User confirms (Y)
+    ServerM->>ServerP: sell James S1 10 103.0 Y
+    ServerP-->>ServerM: OK sell S1 <remaining> at avg <avg_price>
+    ServerM->>ServerQ: advance S1
+    ServerQ-->>ServerM: (no reply)
+    ServerM-->>Client: OK sell S1 <remaining> at avg <avg_price>
+else User denies (N)
+    ServerM-->>Client: ERR sell denied by user
+end
+
+```
+###### postion
+```
+Client   -> ServerM : position
+ServerM  -> ServerP : position <username>
+ServerP  -> ServerM : OK position\nS1 10 @ avg 100.0\nS2 5 @ avg 50.0
+ServerM  -> ServerQ : quote S1
+ServerQ  -> ServerM : S1 105.0
+ServerM  -> ServerQ : quote S2
+ServerQ  -> ServerM : S2 55.0
+ServerM  -> Client  : OK S1 10 @ avg 100.0 | P/L = 50.00\nS2 5 @ avg 50.0 | P/L = 25.00\n<username>’s current profit is 75.00
 
 
-
-
-
-
-
+```
 
 f. Any idiosyncrasy of your project. It should specify under what conditions the project fails, if any.
 1. servers are not started as assigned order
@@ -103,3 +150,4 @@ Your project grade will depend on the following:
     different inputs. Your TA/Grader runs your project as is, according to the project description and your
     README file and then checks whether it works correctly or not. If your README is not consistent
     with the description, we will follow the description.
+

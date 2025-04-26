@@ -10,12 +10,17 @@ namespace client {
     const std::string ACCESS_DENIED       = "[Client] The credentials are incorrect. Please try again.";
     const std::string PROMPT_USERNAME     = "Please enter the username: ";
     const std::string PROMPT_PASSWORD     = "Please enter the password: ";
+
+    const std::string PROMPT_CORRECT_CREDENTIAL = "[Client] You have been granted access.";
+    const std::string PROMPT_WRONG_CREDENTIAL = "[Client] The credentials are incorrect. Please try again.";
+
+
     const std::string CONNECTION_ERROR    = "[Client] Connection closed or failed.";
 
     const std::string PROMPT_COMMAND      = "[Client] Please enter the command:\n> ";
 
     const std::string MSG_SENT_COMMAND    = "[Client] Sent command to the main server.";
-    const std::string MSG_RECEIVED_REPLY  = "[Client] Received the response from the main server using TCP.";
+    const std::string MSG_RECEIVED_REPLY_WITHOUT_PORT  = "[Client] Received the response from the main server using TCP over port ";
 
     const std::string MSG_GOODBYE         = "[Client] Exiting.";
 }

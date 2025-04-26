@@ -16,10 +16,10 @@ namespace serverP {
         double avg_price = 0.0;
     };
 
-    using Portfolio = std::unordered_map<std::string, StockHolding>;  // stock → 持仓
+    using Portfolio = std::unordered_map<std::string, StockHolding>;  // stock → hodings
     using UserMap = std::unordered_map<std::string, Portfolio>;       // user → portfolio
 
-    UserMap loadPortfolios(const std::string& filename);
+    //UserMap loadPortfolios(const std::string& filename);
 }
 
 #endif

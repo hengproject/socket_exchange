@@ -2,6 +2,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <iomanip>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -12,6 +13,9 @@
 #include "common_sockets.h"
 
 using namespace serverM;
+namespace serverM {
+    std::unordered_map<int, std::string> client_fd_to_user;
+}
 
 // 密码加密函数
 std::string serverM::encryptPassword(const std::string& password) {
@@ -27,9 +31,224 @@ std::string serverM::encryptPassword(const std::string& password) {
     return encrypted;
 }
 
-// 处理一个 client 的完整登录流程
+// position request
+void serverM::handle_position_command(int client_fd, int udp_sock, const std::string& username) {
+    std::cout <<"[Server M] Received a position request from Member to check "<<username<<"’s gain using TCP over port "<<PORT_SERVER_M_TCP<<". " <<std::endl;
+    std::string request = "position " + username;
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, request);
+    std::cout <<"[Server M] Forwarded the position request to server P. "<<std::endl;
+    Optional<std::string> reply = udp_recv_string(udp_sock);
+    if (!reply.has_value()) {
+        tcp_send_string(client_fd, "ERR position timeout");
+        return;
+    }
+
+    std::istringstream iss(reply.value());
+    std::string line;
+    std::getline(iss, line); // OK position
+
+    if (line.substr(0, 2) != "OK") {
+        tcp_send_string(client_fd, reply.value()); // 直接转发错误提示
+        return;
+    }
+    std::cout <<"[Server M] Received user’s portfolio from server P using UDP over "<<PORT_SERVER_M_UDP<<std::endl;
+    std::ostringstream response;
+    double total_profit = 0.0;
+
+    while (std::getline(iss, line)) {
+        std::istringstream line_iss(line);
+        std::string stock;
+        int quantity;
+        std::string at_str, avg_label;
+        double avg_price;
+
+        line_iss >> stock >> quantity >> at_str >> avg_label >> avg_price;
+
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stock);
+        Optional<std::string> quote_reply = udp_recv_string(udp_sock);
+        if (!quote_reply.has_value()) {
+            response << stock << " ? @ avg " << avg_price << " | P/L = ???\n";
+            continue;
+        }
+
+        std::istringstream quote_iss(quote_reply.value());
+        std::string stock_name;
+        double current_price;
+        quote_iss >> stock_name >> current_price;
+
+        double profit = (current_price - avg_price) * quantity;
+        response << stock << " " << quantity << " @ avg " << avg_price
+                 << " | P/L = " << std::fixed << std::setprecision(2) << profit << "\n";
+        total_profit += profit;
+    }
+    response<<client_fd_to_user[client_fd]<<"’s current profit is "<<total_profit<<".\n";
+    std::ostringstream final_response;
+    final_response << "OK\n" << response.str();
+    tcp_send_string(client_fd, final_response.str());
+    printf(final_response.str().c_str());
+    std::cout << "[Server M] Forwarded the gain to the client. " << std::endl;
+}
+
+// quote requests
+void serverM::handle_quote_command(int client_fd, int udp_sock, const std::string& command) {
+    //general or specific
+    std::istringstream iss(command);
+    std::string keyword, stock;
+    iss >> keyword >> stock;
+     if (stock.empty()) {
+        std::cout << "[Server M] Received a quote request from " << client_fd_to_user[client_fd]<<", using TCP over port " << PORT_SERVER_M_TCP << "." <<std::endl;
+    } else {
+         std::cout << "[Server M] Received a quote request from " << client_fd_to_user[client_fd]<<" for stock " << stock <<
+            ", using TCP over port " << PORT_SERVER_M_TCP << "."<<std::endl;
+    }
+
+    // qoute Q
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, command);
+    std::cout << AFTER_FORWARD_TO_Q << std::endl;
+
+
+    Optional<std::string> quote_result = udp_recv_string(udp_sock);
+    if (stock.empty()) {
+        std::cout <<"[Server M] Received the quote response from server Q using UDP over "<< PORT_SERVER_M_UDP  <<std::endl;
+    } else {
+        std::cout <<"[Server M] Received the quote response from server Q for "<<stock<<" using UDP over "<< PORT_SERVER_M_UDP <<std::endl;
+    }
+
+
+    if (!quote_result.has_value()) {
+        std::cerr << MSG_FAILED_GET_QUOTE << std::endl;
+        tcp_send_string(client_fd, MSG_FAILED_GET_QUOTE2);
+    } else {
+        tcp_send_string(client_fd, quote_result.value());
+    }
+    std::cout << AFTER_FORWARD_TO_CLIENT <<std::endl;
+}
+
+// 封装：处理 buy 请求
+void serverM::handle_buy_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity) {
+    if (stock.empty() || quantity <= 0) {
+        tcp_send_string(client_fd, MSG_BUY_INVALID);
+        return;
+    }
+
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stock);
+    Optional<std::string> price_resp = udp_recv_string(udp_sock);
+    if (!price_resp.has_value()) {
+        tcp_send_string(client_fd, MSG_BUY_PRICE_FAIL);
+        return;
+    }
+
+    std::istringstream price_iss(price_resp.value());
+    std::string stock_reply;
+    double price;
+    price_iss >> stock_reply >> price;
+
+    std::ostringstream msg_to_P;
+    msg_to_P << "buy " << username << " " << stock << " " << quantity << " " << price;
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
+
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
+    std::cout << "[Server M] Sent a time forward request for "<<stock<<"." << std::endl;
+    std::ostringstream response;
+    response << "OK buy " << stock << " " << quantity << " at " << price;
+    tcp_send_string(client_fd, response.str());
+}
+
+void serverM::handle_sell_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity) {
+    if (stock.empty() || quantity <= 0) {
+        tcp_send_string(client_fd, "ERR sell invalid command");
+        return;
+    }
+
+    std::cout << "[Server M] Received a sell request from member " << username
+              << " using TCP over port " << PORT_SERVER_M_TCP << "." << std::endl;
+
+    // 1. 获取股票当前价格
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stock);
+    std::cout << "[Server M] Sent the quote request to server Q." << std::endl;
+
+    Optional<std::string> price_resp = udp_recv_string(udp_sock);
+    if (!price_resp.has_value()) {
+        tcp_send_string(client_fd, "ERR sell cannot retrieve quote");
+        return;
+    }
+    std::cout << "[Server M] Received quote response from server Q." << std::endl;
+
+    std::istringstream price_iss(price_resp.value());
+    std::string stock_reply;
+    double price;
+    price_iss >> stock_reply >> price;
+
+    // 2. 检查是否有足够shares
+    std::ostringstream check_msg;
+    check_msg << "check " << username << " " << stock << " " << quantity;
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, check_msg.str());
+    std::cout << "[Server M] Forwarded the sell request to server P." << std::endl;
+
+    Optional<std::string> check_resp = udp_recv_string(udp_sock);
+    if (!check_resp.has_value()) {
+        tcp_send_string(client_fd, "ERR sell no response from ServerP");
+        return;
+    }
+    std::cout << "[Server M] Received user's portfolio from server P using UDP over "
+              << PORT_SERVER_M_UDP << "." << std::endl;
+
+    if (check_resp.value() != "OK") {
+        tcp_send_string(client_fd, "ERR sell not enough shares");
+        return;
+    }
+
+    // 3. 询问用户确认
+    std::ostringstream confirm_msg;
+    confirm_msg << "CONFIRM sell " << stock << " " << quantity << " at " << price;
+    tcp_send_string(client_fd, confirm_msg.str());
+    std::cout << "[Server M] Forwarded the sell confirmation to the client." << std::endl;
+
+    Optional<std::string> client_confirm = tcp_recv_string(client_fd);
+    if (!client_confirm.has_value() || (client_confirm.value() != "Y" && client_confirm.value() != "N")) {
+        tcp_send_string(client_fd, "ERR sell cancelled by invalid confirmation");
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
+        std::cout << "[Server M] Sent a time forward request for " << stock << "." << std::endl;
+        return;
+    }
+
+    if (client_confirm.value() == "N") {
+        std::cout << "[Server M] Sell denied." << std::endl;
+        tcp_send_string(client_fd, "ERR sell denied by user");
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
+        std::cout << "[Server M] Sent a time forward request for " << stock << "." << std::endl;
+        return;
+    }
+
+    // 4. 用户确认卖出 (Y)，发sell指令给P, time shift
+    std::ostringstream sell_msg;
+    sell_msg << "sell " << username << " " << stock << " " << quantity << " " << price << " Y";
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, sell_msg.str());
+    std::cout << "[Server M] Forwarded the sell confirmation response to Server P." << std::endl;
+
+
+    Optional<std::string> final_resp = udp_recv_string(udp_sock);
+    if (!final_resp.has_value()) {
+        tcp_send_string(client_fd, "ERR sell no response from ServerP");
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
+        std::cout << "[Server M] Sent a time forward request for " << stock << "." << std::endl;
+        return;
+    }
+
+    // 5. 把ServerP返回的OK结果发给Client
+    tcp_send_string(client_fd, final_resp.value());
+    std::cout << "[Server M] Forwarded the sell result to the client." << std::endl;
+
+    // 6. 推进股票价格
+    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
+    std::cout << "[Server M] Sent a time forward request for " << stock << "." << std::endl;
+}
+
+
+
+// 登录处理逻辑封装
 void serverM::handle_single_client(int client_fd, int udp_sock) {
-    // step 1: recv message from client
+    a:
     auto maybe_msg = tcp_recv_string(client_fd);
     if (!maybe_msg.has_value()) {
         close(client_fd);
@@ -37,7 +256,6 @@ void serverM::handle_single_client(int client_fd, int udp_sock) {
     }
     std::string received = maybe_msg.value();
 
-    // step2: encrypt
     auto comma_pos = received.find(',');
     std::string username = received.substr(0, comma_pos);
     std::string password = received.substr(comma_pos + 1);
@@ -47,11 +265,9 @@ void serverM::handle_single_client(int client_fd, int udp_sock) {
     std::string encrypted = encryptPassword(password);
     std::string messageToA = username + "," + encrypted;
 
-    // step3: Send to ServerA
     udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_A, messageToA);
     std::cout << SENT_TO_SERVERA << std::endl;
 
-    // step4: Receive from ServerA
     auto authResultOpt = udp_recv_string(udp_sock);
     if (!authResultOpt.has_value()) {
         std::cerr << MSG_FAILED_FROM_SERVERA << std::endl;
@@ -62,20 +278,22 @@ void serverM::handle_single_client(int client_fd, int udp_sock) {
     std::string authResult = authResultOpt.value();
     std::cout << RECEIVED_FROM_SERVERA << PORT_SERVER_M_UDP << std::endl;
 
-    // step5: forward back to client
     tcp_send_string(client_fd, authResult);
     std::cout << SENT_TO_CLIENT << PORT_SERVER_M_TCP << std::endl;
 
     if (authResult == MSG_AUTH_GRANTED) {
-        // 登录成功后进入 Phase 3 命令循环
-        handle_phase3_commands(client_fd, udp_sock,username);
+        client_fd_to_user[client_fd] = username;
+        handle_phase3_commands(client_fd, udp_sock, username);
+    }
+    else{
+        goto a;
     }
 
+
+    client_fd_to_user.erase(client_fd);
     close(client_fd);
 }
-
-// Phase 3 命令分发
-void serverM::handle_phase3_commands(int client_fd, int udp_sock,const std::string& username) {
+void serverM::handle_phase3_commands(int client_fd, int udp_sock, const std::string& username) {
     while (true) {
         Optional<std::string> cmd = tcp_recv_string(client_fd);
         if (!cmd.has_value()) {
@@ -90,59 +308,23 @@ void serverM::handle_phase3_commands(int client_fd, int udp_sock,const std::stri
             break;
         }
 
-        // check quote command
         if (command.substr(0, 5) == "quote") {
-            // forward quote command to Server Q
-            udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, command);
-            Optional<std::string> quote_result = udp_recv_string(udp_sock);
-
-            if (!quote_result.has_value()) {
-                std::cerr << MSG_FAILED_GET_QUOTE << std::endl;
-                tcp_send_string(client_fd, MSG_FAILED_GET_QUOTE2);
-            } else {
-                tcp_send_string(client_fd, quote_result.value());
-            }
-        }
-        // check buy command
-        else if (command.substr(0, 3) == "buy") {
+            handle_quote_command(client_fd, udp_sock, command);
+        } else if (command.substr(0, 3) == "buy") {
             std::istringstream iss(command);
             std::string cmd, stock;
             int quantity;
             iss >> cmd >> stock >> quantity;
-
-            if (stock.empty() || quantity <= 0) {
-                tcp_send_string(client_fd, MSG_BUY_INVALID);
-                continue;
-            }
-
-            // Step 1: 向 serverQ 查询当前价格
-            udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stock);
-            Optional<std::string> price_resp = udp_recv_string(udp_sock);
-            if (!price_resp.has_value()) {
-                tcp_send_string(client_fd, MSG_BUY_PRICE_FAIL);
-                continue;
-            }
-
-            std::istringstream price_iss(price_resp.value());
-            std::string stock_reply;
-            double price;
-            price_iss >> stock_reply >> price;
-
-            // Step 2: 更新 serverP
-            std::ostringstream msg_to_P;
-            msg_to_P << "buy " << username << " " << stock << " " << quantity << " " << price;
-            udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
-
-            // Step 3: 通知 serverQ 推进价格
-            udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stock);
-
-            // Step 4: 回复 client
-            std::ostringstream response;
-            response << "OK buy " << stock << " " << quantity << " at " << price;
-            tcp_send_string(client_fd, response.str());
-
-        }
-        else {
+            handle_buy_command(client_fd, udp_sock, username, stock, quantity);
+        } else if (command.substr(0, 4) == "sell") {
+            std::istringstream iss(command);
+            std::string cmd, stock;
+            int quantity;
+            iss >> cmd >> stock >> quantity;
+            handle_sell_command(client_fd, udp_sock, username, stock, quantity);
+        } else if (command == "position") {
+            handle_position_command(client_fd, udp_sock, username);
+        } else {
             tcp_send_string(client_fd, MSG_UNKNOWN_COMMAND);
         }
     }
@@ -152,7 +334,6 @@ int main() {
     std::cout << BOOTUP_MESSAGE << PORT_SERVER_M_UDP << "." << std::endl;
     std::cout << TCP_LISTEN_MESSAGE << PORT_SERVER_M_TCP << "." << std::endl;
 
-    // set up tcp & udp server
     int tcp_sock = create_tcp_server_socket(LOCALHOST, PORT_SERVER_M_TCP);
     int udp_sock = create_udp_server_socket(LOCALHOST, PORT_SERVER_M_UDP);
 
@@ -164,7 +345,6 @@ int main() {
             perror("accept");
             continue;
         }
-
         serverM::handle_single_client(client_fd, udp_sock);
     }
 

@@ -55,22 +55,30 @@ int main() {
 
         if (cmd == CMD_QUOTE) {
             if (stock.empty()) {
-                // quote 所有股票
+                std::cout << RECIEVED_GENERAL_QOUTE<< std::endl;
+                // quote all
                 for (const auto& pair : quotes) {
                     response << pair.first << " " << pair.second.current_price() << "\n";
                 }
+                std::cout << GENERAL_QUOTE_RET<< std::endl;
             } else {
-                // quote 某一个股票
+                std::cout << RECIEVED_SPECIFIC_QOUTE<< stock <<"."<<std::endl;
+                // quote one
                 auto it = quotes.find(stock);
                 if (it != quotes.end()) {
                     response << stock << " " << it->second.current_price() << "\n";
+                    std::cout << SPECIFIC_QOUTE_RET<< stock <<"."<<std::endl;
                 } else {
-                    response << RESP_UNKNOWN_STOCK << stock << "\n";
+                    response << stock << RESP_STOCK_404 << "\n";
                 }
+
             }
         }else if (cmd == CMD_ADVANCE) {
             auto it = quotes.find(stock);
             if (it != quotes.end()) {
+                std::cout << "[Server Q] Received a time forward request for " << stock
+             << ", the current price of that stock is " << it->second.current_price()
+             << " at time " << it->second.current_index << "." << std::endl;
                 it->second.advance();
                 response << RESP_ADVANCE_OK << stock << "\n";
             } else {

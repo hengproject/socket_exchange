@@ -101,7 +101,7 @@ inline int create_tcp_client_socket(const std::string& ip, int port) {
 }
 
 // TCP 接收字符串数据（支持 null 终止），封装为 Optional
-inline Optional<std::string> tcp_recv_string(int sockfd, size_t max_len = 256) {
+inline Optional<std::string> tcp_recv_string(int sockfd, size_t max_len = 512) {
     char* buffer = new char[max_len];
     std::memset(buffer, 0, max_len);
 
@@ -163,7 +163,7 @@ inline void udp_send_string(int sockfd, const std::string& ip, int port, const s
 }
 
 // UDP 接收字符串数据（封装为 Optional）
-inline Optional<std::string> udp_recv_string(int sockfd, size_t max_len = 256) {
+inline Optional<std::string> udp_recv_string(int sockfd, size_t max_len = 512) {
     char* buffer = new char[max_len];
     std::memset(buffer, 0, max_len);
 
