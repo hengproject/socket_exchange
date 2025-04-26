@@ -54,7 +54,7 @@ int main() {
         std::ostringstream response;
 
         if (cmd == CMD_QUOTE) {
-            if (stock.empty()) {
+            if (stock=="ALL") {
                 std::cout << RECIEVED_GENERAL_QOUTE<< std::endl;
                 // quote all
                 for (const auto& pair : quotes) {

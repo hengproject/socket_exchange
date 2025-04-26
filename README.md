@@ -52,6 +52,12 @@ ServerM
   ↓ TCP: S1 102.5
 Client
 ```
+```
+QUOTE,OK,<DATA>
+QUOTE,ERROR,<stock name> 
+```
+
+
 ##### BUY
 ```
 

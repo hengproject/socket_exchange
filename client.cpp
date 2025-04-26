@@ -1,4 +1,5 @@
 #include <iostream>
+#include <tuple>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -12,6 +13,61 @@
 
 void enter_command_loop(int sockfd,const std::string& username);
 bool confirm_YN(const std::string& prompt);
+
+std::tuple<std::string, std::string, std::string> parseMessage(const std::string& message) {
+    size_t firstComma = message.find(',');
+    size_t secondComma = message.find(',', firstComma + 1);
+
+    std::string type, status, content;
+    if (firstComma != std::string::npos) {
+        type = message.substr(0, firstComma);
+    }
+    if (secondComma != std::string::npos) {
+        status = message.substr(firstComma + 1, secondComma - firstComma - 1);
+    }
+    if (secondComma != std::string::npos) {
+        content = message.substr(secondComma + 1);
+    }
+
+    return std::make_tuple(type, status, content);
+}
+
+void QuoteResponseHandler(const std::string& status, const std::string& content) {
+    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>. " << std::endl;
+    if (status == "OK") {
+        std::cout << content << std::endl;
+    } else if (status == "ERROR") {
+        std::cout << content <<" does not exist. Please try again. "<< std::endl;
+    }
+}
+
+void PositionResponseHandler(const std::string& status, const std::string& content) {
+
+    return;
+}
+
+void BuyResponseHandler(const std::string& status, const std::string& content) {
+    return;
+}
+
+void SellResponseHandler(const std::string& status, const std::string& content) {
+	return;
+}
+
+// 这是你要的 router
+void HandleServerReply(const std::string& type, const std::string& status, const std::string& content) {
+    if (type == "QUOTE") {
+        QuoteResponseHandler(status, content);
+    } else if (type == "POSITION") {
+        PositionResponseHandler(status, content);
+    } else if (type == "BUY") {
+        BuyResponseHandler(status, content);
+    } else if (type == "SELL") {
+        SellResponseHandler(status, content);
+    } else {
+        std::cerr << "Unknown response type: " << type << std::endl;
+    }
+}
 
 int main() {
     std::cout << client::BOOTUP_MESSAGE << std::endl;
@@ -63,97 +119,6 @@ int main() {
     return 0;
 }
 
-// ------------ NEW 确认函数 ------------ //
-bool confirm_YN(const std::string& prompt) {
-    std::string input;
-    std::cout << prompt << " (Y/N): ";
-    std::getline(std::cin, input);
-    return input == "Y" || input == "y";
-}
-
-void handle_OK_reply(const std::string& reply, const std::string& username) {
-    std::istringstream iss(reply);
-    std::string ok_word;
-    std::string next_word;
-    iss >> ok_word >> next_word;
-
-    if (next_word == "sell") {
-        // 处理卖出成功
-        std::string stock;
-        int remaining_quantity;
-        std::string at_word;
-        double avg_price;
-        iss >> stock >> remaining_quantity >> at_word >> avg_price;
-
-        std::cout << "[Client] " << username << " successfully sold shares of " << stock << "." << std::endl;
-    } else {
-        // 处理position查询
-        std::string line;
-        std::getline(iss, line); // 直接跳过第一行（next_word可能不完整，干脆新起一行）
-        while (std::getline(iss, line)) {
-            std::cout << line << std::endl;
-        }
-    }
-}
-
-
-
-void handle_ERR_reply(const std::string& reply, const std::string& username) {
-    if (reply.find("stock name does not exist") != std::string::npos) {
-        std::cout << "[Client] Error: stock name does not exist. Please check again." << std::endl;
-    } else if (reply.find("not enough shares") != std::string::npos) {
-        std::cout << "[Client] Error: " << username << " does not have enough shares to sell. Please try again." << std::endl;
-    } else if (reply.find("invalid command") != std::string::npos) {
-        std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to sell." << std::endl;
-    } else if (reply.find("denied by user") != std::string::npos) {
-        std::cout << "[Client] Sell denied." << std::endl;
-    } else {
-        std::cout << "[Client] Error: " << reply << std::endl;
-    }
-}
-
-void handle_CONFIRM_reply(int sockfd, const std::string& confirm_msg, const std::string& username) {
-    // 解析 CONFIRM 类型的消息，比如：
-    // "CONFIRM sell S1 10 at 103.0"
-    // 将来buy也可以复用
-
-    std::istringstream iss(confirm_msg);
-    std::string confirm_word, action, stock;
-    int quantity;
-    std::string at_word;
-    double price;
-    iss >> confirm_word >> action >> stock >> quantity >> at_word >> price;
-
-    if (action == "sell") {
-        std::cout << "[Client] " << stock << "’s current price is " << price << ". Proceed to sell? (Y/N)" << std::endl;
-    } else if (action == "buy") {
-        std::cout << "[Client] " << stock << "’s current price is " << price << ". Proceed to buy? (Y/N)" << std::endl;
-    } else {
-        std::cout << "[Client] Unknown confirm action: " << action << std::endl;
-    }
-
-    std::string choice;
-    std::getline(std::cin, choice);
-    if (choice == "Y" || choice == "y") {
-        tcp_send_string(sockfd, "Y");
-    } else {
-        tcp_send_string(sockfd, "N");
-    }
-
-    // 等待服务器返回最终结果
-    Optional<std::string> final_reply = tcp_recv_string(sockfd);
-    if (!final_reply.has_value()) {
-        std::cerr << client::CONNECTION_ERROR << std::endl;
-        return;
-    }
-
-    std::string result = final_reply.value();
-    if (result.rfind("OK", 0) == 0) {
-        handle_OK_reply(result, username);
-    } else {
-        handle_ERR_reply(result, username);
-    }
-}
 
 
 void enter_command_loop(int sockfd, const std::string& username) {
@@ -178,19 +143,7 @@ void enter_command_loop(int sockfd, const std::string& username) {
 
         std::string server_reply = reply.value();
         std::cout << client::MSG_RECEIVED_REPLY_WITHOUT_PORT << PORT_SERVER_M_TCP << "." << std::endl;
-        // 分类处理 server 回复
-        if (server_reply.rfind("OK", 0) == 0) {
-            handle_OK_reply(server_reply, username);
-
-        } else if (server_reply.rfind("ERR", 0) == 0) {
-            handle_ERR_reply(server_reply, username);
-
-        } else if (server_reply.rfind("CONFIRM", 0) == 0) {
-            handle_CONFIRM_reply(sockfd, server_reply, username);
-
-        } else {
-            std::cout << "[Client] Unknown server response: " << server_reply << std::endl;
-        }
+		std::cout << server_reply << std::endl;
 
         std::cout << "----- Start a new request -----" << std::endl;
     }

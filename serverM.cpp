@@ -89,40 +89,34 @@ void serverM::handle_position_command(int client_fd, int udp_sock, const std::st
     std::cout << "[Server M] Forwarded the gain to the client. " << std::endl;
 }
 
-// quote requests
-void serverM::handle_quote_command(int client_fd, int udp_sock, const std::string& command) {
-    //general or specific
-    std::istringstream iss(command);
-    std::string keyword, stock;
-    iss >> keyword >> stock;
-     if (stock.empty()) {
+void handleQuote(int client_fd, int udp_sock,const std::string& stockName) {
+    //std::cout << stockName << std::endl;
+ 	if (stockName == "ALL") {
         std::cout << "[Server M] Received a quote request from " << client_fd_to_user[client_fd]<<", using TCP over port " << PORT_SERVER_M_TCP << "." <<std::endl;
     } else {
-         std::cout << "[Server M] Received a quote request from " << client_fd_to_user[client_fd]<<" for stock " << stock <<
+         std::cout << "[Server M] Received a quote request from " << client_fd_to_user[client_fd]<<" for stock " << stockName <<
             ", using TCP over port " << PORT_SERVER_M_TCP << "."<<std::endl;
     }
-
-    // qoute Q
-    udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, command);
+  	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stockName);
     std::cout << AFTER_FORWARD_TO_Q << std::endl;
-
-
-    Optional<std::string> quote_result = udp_recv_string(udp_sock);
-    if (stock.empty()) {
+	Optional<std::string> quote_result = udp_recv_string(udp_sock);
+    if (stockName == "ALL") {
         std::cout <<"[Server M] Received the quote response from server Q using UDP over "<< PORT_SERVER_M_UDP  <<std::endl;
     } else {
-        std::cout <<"[Server M] Received the quote response from server Q for "<<stock<<" using UDP over "<< PORT_SERVER_M_UDP <<std::endl;
+        std::cout <<"[Server M] Received the quote response from server Q for "<<stockName<<" using UDP over "<< PORT_SERVER_M_UDP <<std::endl;
     }
-
-
-    if (!quote_result.has_value()) {
+	std::ostringstream response;
+	response << "QUOTE,";
+	if (!quote_result.has_value()) {
         std::cerr << MSG_FAILED_GET_QUOTE << std::endl;
-        tcp_send_string(client_fd, MSG_FAILED_GET_QUOTE2);
+		response <<"ERR,"<<stockName;
     } else {
-        tcp_send_string(client_fd, quote_result.value());
+		response <<"OK,"<<quote_result.value();
     }
+	tcp_send_string(client_fd, quote_result.value());
     std::cout << AFTER_FORWARD_TO_CLIENT <<std::endl;
 }
+
 
 // 封装：处理 buy 请求
 void serverM::handle_buy_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity) {
@@ -301,15 +295,20 @@ void serverM::handle_phase3_commands(int client_fd, int udp_sock, const std::str
             break;
         }
 
-        std::string command = cmd.value();
+        std::string input = cmd.value();
+		std::string command = cmd.value();
+		std::istringstream iss(input);
+    	std::string new_command, arg1, arg2;
+    	iss >> new_command >> arg1 >> arg2;
 
-        if (command == "exit") {
+        if (new_command == "exit") {
             std::cout << MSG_CLIENT_EXITED << std::endl;
             break;
         }
 
-        if (command.substr(0, 5) == "quote") {
-            handle_quote_command(client_fd, udp_sock, command);
+        if (new_command == "quote") {
+        	if (arg1.empty()) handleQuote(client_fd, udp_sock, "ALL");
+        	else handleQuote(client_fd, udp_sock, arg1);
         } else if (command.substr(0, 3) == "buy") {
             std::istringstream iss(command);
             std::string cmd, stock;
