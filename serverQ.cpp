@@ -54,6 +54,7 @@ int main() {
         std::ostringstream response;
 
         if (cmd == CMD_QUOTE) {
+			std::cout << cmd <<"get"<< std::endl;
             if (stock=="ALL") {
                 std::cout << RECIEVED_GENERAL_QOUTE<< std::endl;
                 // quote all
@@ -71,8 +72,8 @@ int main() {
                 } else {
                     response << stock << RESP_STOCK_404 << "\n";
                 }
-
             }
+			udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, response.str());
         }else if (cmd == CMD_ADVANCE) {
             auto it = quotes.find(stock);
             if (it != quotes.end()) {
@@ -87,9 +88,10 @@ int main() {
         }
         else {
             response << RESP_UNKNOWN_COMMAND;
+			udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, response.str());
         }
 
-        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, response.str());
+
     }
 
     close(udp_sock);

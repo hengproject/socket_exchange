@@ -59,7 +59,6 @@ void BuyResponseHandler(const std::string& status, const std::string& content) {
     if (status == "ERROR") {
         if (content.empty()) {
             std::cout << "[Client] Buy request denied by the user." << std::endl;
-            std::cout << "---Start a new request---" << std::endl;
         } else {
             std::cout << "[Client] " << content << " does not exist. Please check again." << std::endl;
         }
@@ -77,7 +76,6 @@ void BuyResponseHandler(const std::string& status, const std::string& content) {
         std::string price = content.substr(first + 1, second - first - 1);
         std::string shares = content.substr(second + 1);
         std::cout << "[Client] " << username << " successfully bought "<< shares <<" shares of " << stock << "." << std::endl;
-        std::cout << "---Start a new request---" << std::endl;
     }
 }
 
