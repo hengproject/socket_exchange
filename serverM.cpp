@@ -213,7 +213,8 @@ void handleSell(int client_fd, int udp_sock, const std::string& stockName, int s
 	std::cout << "[Server M] Forwarded the sell confirmation to the client."<<std::endl;
 
 	Optional<std::string> client_confirm = tcp_recv_string(client_fd);
-    if (client_confirm.has_value() && (client_confirm.value() != "Y" || client_confirm.value() != "y")) {
+    if (client_confirm.has_value() && client_confirm.value() != "Y" && client_confirm.value() != "y") {
+		tcp_send_string(client_fd, "SELL,ERROR");
 		return;
     }
 	std::ostringstream sell_msg;

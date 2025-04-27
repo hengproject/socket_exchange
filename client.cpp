@@ -99,10 +99,13 @@ void SellResponseHandler(const std::string& status, const std::string& content) 
 
         std::cout << "[Client] " << username << " successfully sold " << number_of_shares
                   << " shares of " << stock_name << "." << std::endl;
-        std::cout << "---Start a new request---" << std::endl;
+        		new_req();
 
     } else if (status == "ERROR") {
-        if (content == "stock name does not exist") {
+		if (content.empty()) {
+			std::cout << "[Client] Sell request denied by the user." << std::endl;
+		}
+        else if (content == "stock name does not exist") {
             std::cout << "[Client] Error: stock name does not exist. Please check again." << std::endl;
         } else {
             // content格式: username does not have enough shares of ,stock_name
@@ -110,10 +113,9 @@ void SellResponseHandler(const std::string& status, const std::string& content) 
             std::string msg, stock_name;
             getline(iss, msg, ',');
             getline(iss, stock_name, ',');
-
             std::cout << "[Client] Error: " << msg << stock_name << " to sell. Please try again" << std::endl;
-            std::cout << "---Start a new request---" << std::endl;
         }
+		new_req();
 
     } else if (status == "CONFIRM") {
         // content格式: stock_name,current_price
