@@ -34,6 +34,11 @@ std::tuple<std::string, std::string, std::string> parseMessage(const std::string
     return std::make_tuple(type, status, content);
 }
 
+void new_req(){
+	std::cout << "----- Start a new request -----" << std::endl;
+}
+
+
 void QuoteResponseHandler(const std::string& status, const std::string& content) {
     std::cout << "[Client] Received the response from the main server using TCP over port <client port number>. " << std::endl;
     if (status == "OK") {
@@ -80,9 +85,43 @@ void BuyResponseHandler(const std::string& status, const std::string& content) {
 }
 
 void SellResponseHandler(const std::string& status, const std::string& content) {
-	return;
+    if (status == "OK") {
+        // content格式: username,number_of_shares,stock_name
+        std::istringstream iss(content);
+        std::string username, number_of_shares, stock_name;
+        getline(iss, username, ',');
+        getline(iss, number_of_shares, ',');
+        getline(iss, stock_name, ',');
+
+        std::cout << "[Client] " << username << " successfully sold " << number_of_shares
+                  << " shares of " << stock_name << "." << std::endl;
+        std::cout << "---Start a new request---" << std::endl;
+
+    } else if (status == "ERROR") {
+        if (content == "stock name does not exist") {
+            std::cout << "[Client] Error: stock name does not exist. Please check again." << std::endl;
+        } else {
+            // content格式: username does not have enough shares of ,stock_name
+            std::istringstream iss(content);
+            std::string msg, stock_name;
+            getline(iss, msg, ',');
+            getline(iss, stock_name, ',');
+
+            std::cout << "[Client] Error: " << msg << stock_name << " to sell. Please try again" << std::endl;
+            std::cout << "---Start a new request---" << std::endl;
+        }
+
+    } else if (status == "CONFIRM") {
+        // content格式: stock_name,current_price
+        std::istringstream iss(content);
+        std::string stock_name, current_price;
+        getline(iss, stock_name, ',');
+        getline(iss, current_price, ',');
+
+        std::cout << "[Client] " << stock_name << "'s current price is " << current_price
+                  << ". Proceed to sell? (Y/N)" << std::endl;
+    }
 }
-// 这是你要的 router
 void HandleServerReply(const std::string& type, const std::string& status, const std::string& content) {
     if (type == "QUOTE") {
         QuoteResponseHandler(status, content);
@@ -149,18 +188,33 @@ int main() {
 
 
 bool validateInput(const std::string& input) {
-	auto ok = true;
-    if (input.find("buy ") == 0) {
+    bool ok = true;
+    if (input.find("buy") == 0) {
         size_t firstSpace = input.find(' ');
         size_t secondSpace = input.find(' ', firstSpace + 1);
         size_t thirdSpace = input.find(' ', secondSpace + 1);
 
-         ok = (firstSpace != std::string::npos &&
-                secondSpace != std::string::npos &&
-                thirdSpace == std::string::npos);
-		if(!ok){std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to buy." << std::endl;}
+        ok = (firstSpace != std::string::npos &&
+              secondSpace != std::string::npos &&
+              thirdSpace == std::string::npos);
+
+        if (!ok) {
+            std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to buy." << std::endl;
+        }
+    } else if (input.find("sell") == 0) {
+        size_t firstSpace = input.find(' ');
+        size_t secondSpace = input.find(' ', firstSpace + 1);
+        size_t thirdSpace = input.find(' ', secondSpace + 1);
+
+        ok = (firstSpace != std::string::npos &&
+              secondSpace != std::string::npos &&
+              thirdSpace == std::string::npos);
+
+        if (!ok) {
+            std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to sell." << std::endl;
+        }
     }
-    return ok; // 其他指令一律合法
+    return ok; // 其他指令默认合法
 }
 
 
@@ -193,6 +247,6 @@ void enter_command_loop(int sockfd, const std::string& username) {
 		//std::cout << server_reply << std::endl;
 		auto message = parseMessage(server_reply);
 		HandleServerReply(std::get<0>(message),std::get<1>(message),std::get<2>(message));
-        std::cout << "----- Start a new request -----" << std::endl;
+        //std::cout << "----- Start a new request -----" << std::endl;
     }
 }

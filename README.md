@@ -106,6 +106,14 @@ else User denies (N)
 end
 
 ```
+
+```
+stock not exist: SELL,ERROR,stock name does not exist
+confirm: SELL,CONFIRM,stock_name,current_price
+not enough share: SELL,ERROR,username does not have enough shares of ,stock_name
+sell finished: SELL,OK,username,number_of_shares,stock_name
+```
+
 ###### postion
 ```
 Client   -> ServerM : position

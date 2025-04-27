@@ -53,15 +53,9 @@ void handle_sell(const std::string& username, const std::string& stock, int quan
         user_port.erase(stock);
     }
 
-    // 向ServerM回复成功
-    std::ostringstream response;
-    response << "OK sell " << stock << " " << holding.quantity
-             << " at avg " << holding.avg_price;
-
     std::cout << "[Server P] Successfully sold " << quantity << " shares of "
               << stock << " and updated " << username << "’s portfolio." << std::endl;
 
-    udp_send_string(sockfd, LOCALHOST, PORT_SERVER_M_UDP, response.str());
 }
 
 
@@ -157,7 +151,7 @@ int main() {
 
     portfolios = loadPortfolios(PORTFOLIO_FILE);
 
-    printPortfolios(portfolios);
+    //printPortfolios(portfolios);
     int udp_sock = create_udp_server_socket(LOCALHOST, PORT_SERVER_P);
 
     while (true) {
@@ -204,7 +198,7 @@ int main() {
         } else {
             std::cerr << "[Server P] Unknown command: " << request.value() << std::endl;
         }
-        printPortfolios(portfolios);
+        //printPortfolios(portfolios);
     }
 
     close(udp_sock);
