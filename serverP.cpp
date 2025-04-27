@@ -35,7 +35,6 @@ void handle_buy(const std::string& username, const std::string& stock, int quant
               << stock << " " << holding.quantity << " shares at avg $" << holding.avg_price << std::endl;
 }
 
-// 处理 sell 请求（严格按照交互流程）
 void handle_sell(const std::string& username, const std::string& stock, int quantity, double price, const std::string& confirm, int sockfd) {
     std::cout << "[Server P] Received a sell request from the main server." << std::endl;
 

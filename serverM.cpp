@@ -150,7 +150,7 @@ void handleBuy(int client_fd, int udp_sock, const std::string& stockName, int sh
     }
     std::string confirm = maybe_msg.value();
 	std::ostringstream final_response;
-	if (confirm == "Y") {
+	if (confirm == "Y" || confirm == "y") {
 		std::ostringstream msg_to_P;
     	msg_to_P << "buy " << client_fd_to_user[client_fd] << " " << stockName << " " << shares << " " << price;
     	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
@@ -213,7 +213,7 @@ void handleSell(int client_fd, int udp_sock, const std::string& stockName, int s
 	std::cout << "[Server M] Forwarded the sell confirmation to the client."<<std::endl;
 
 	Optional<std::string> client_confirm = tcp_recv_string(client_fd);
-    if (client_confirm.has_value() && (client_confirm.value() != "Y")) {
+    if (client_confirm.has_value() && (client_confirm.value() != "Y" || client_confirm.value() != "y")) {
 		return;
     }
 	std::ostringstream sell_msg;

@@ -15,7 +15,8 @@ std::string username;
 int sockfd;
 void enter_command_loop(int sockfd,const std::string& username);
 bool confirm_YN(const std::string& prompt);
-
+int getClientPort(int sockfd);
+void new_req();
 std::tuple<std::string, std::string, std::string> parseMessage(const std::string& message) {
     size_t firstComma = message.find(',');
     size_t secondComma = message.find(',', firstComma + 1);
@@ -40,32 +41,34 @@ void new_req(){
 
 
 void QuoteResponseHandler(const std::string& status, const std::string& content) {
-    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>. " << std::endl;
+    //std::cout << "[Client] Received the response from the main server using TCP over port <client port number>. " << std::endl;
     if (status == "OK") {
         std::cout << content << std::endl;
     } else if (status == "ERROR") {
         std::cout << content <<" does not exist. Please try again. "<< std::endl;
     }
+	new_req();
 }
 
 void PositionResponseHandler(const std::string& status, const std::string& content) {
-    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
+    //std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
 	if (status == "OK") {
         std::cout << content << std::endl;
     } else if (status == "ERROR") {
         std::cout << username <<"’s current profit is 0.0. "<< std::endl;
     }
+	new_req();
     return;
 }
 
 void BuyResponseHandler(const std::string& status, const std::string& content) {
-    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
+    //std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
 
     if (status == "ERROR") {
         if (content.empty()) {
             std::cout << "[Client] Buy request denied by the user." << std::endl;
         } else {
-            std::cout << "[Client] " << content << " does not exist. Please check again." << std::endl;
+            std::cout << "[Client] ERROR: stock name " << content << " does not exist. Please check again." << std::endl;
         }
     }
     else if (status == "CONFIRM") {
@@ -81,6 +84,7 @@ void BuyResponseHandler(const std::string& status, const std::string& content) {
         std::string price = content.substr(first + 1, second - first - 1);
         std::string shares = content.substr(second + 1);
         std::cout << "[Client] " << username << " successfully bought "<< shares <<" shares of " << stock << "." << std::endl;
+		new_req();
     }
 }
 
@@ -185,7 +189,17 @@ int main() {
     close(sockfd);
     return 0;
 }
+int getClientPort(int sockfd) {
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
 
+    if (getsockname(sockfd, (struct sockaddr*)&addr, &addr_len) == -1) {
+        perror("getsockname failed");
+        return -1; // 出错时返回 -1
+    }
+
+    return ntohs(addr.sin_port); // 转成主机字节序
+}
 
 bool validateInput(const std::string& input) {
     bool ok = true;
@@ -213,8 +227,12 @@ bool validateInput(const std::string& input) {
         if (!ok) {
             std::cout << "[Client] Error: stock name/shares are required. Please specify a stock name to sell." << std::endl;
         }
-    }
-    return ok; // 其他指令默认合法
+	}else if (input.find("position") == 0) {
+			std::cout << "[Client] "<<username<<" sent a position request to the main server. " << std::endl;
+    }else if (input.find("quote") == 0){
+		std::cout<<"[Client] Sent a quote request to the main server. " <<std::endl;
+	}
+    return ok;
 }
 
 
@@ -234,7 +252,7 @@ void enter_command_loop(int sockfd, const std::string& username) {
 			std::cout << "----- Start a new request -----" << std::endl;
 			continue;
 		}
-        std::cout << client::MSG_SENT_COMMAND << std::endl;
+        //std::cout << client::MSG_SENT_COMMAND << std::endl;
 
         Optional<std::string> reply = tcp_recv_string(sockfd);
         if (!reply.has_value()) {
@@ -243,7 +261,7 @@ void enter_command_loop(int sockfd, const std::string& username) {
         }
 
         std::string server_reply = reply.value();
-        std::cout << client::MSG_RECEIVED_REPLY_WITHOUT_PORT << PORT_SERVER_M_TCP << "." << std::endl;
+        std::cout << "[Client] Received the response from the main server using TCP over port "<< getClientPort(sockfd) <<". " << std::endl;
 		//std::cout << server_reply << std::endl;
 		auto message = parseMessage(server_reply);
 		HandleServerReply(std::get<0>(message),std::get<1>(message),std::get<2>(message));
