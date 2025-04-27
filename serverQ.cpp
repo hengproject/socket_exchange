@@ -54,7 +54,7 @@ int main() {
         std::ostringstream response;
 
         if (cmd == CMD_QUOTE) {
-			std::cout << cmd <<"get"<< std::endl;
+			//std::cout << cmd <<"get"<< std::endl;
             if (stock=="ALL") {
                 std::cout << RECIEVED_GENERAL_QOUTE<< std::endl;
                 // quote all

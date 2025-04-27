@@ -18,6 +18,7 @@ static std::string trim(const std::string& s) {
 UserMap portfolios;
 
 void handle_buy(const std::string& username, const std::string& stock, int quantity, double price, int sockfd) {
+	std::cout << "[Server P] Received a buy request from the client."<<std::endl;
     auto& user_port = portfolios[username];
     auto& holding = user_port[stock];
 
@@ -31,8 +32,7 @@ void handle_buy(const std::string& username, const std::string& stock, int quant
         holding.avg_price = price;
     }
 
-    std::cout << "[Server P] Updated " << username << ": "
-              << stock << " " << holding.quantity << " shares at avg $" << holding.avg_price << std::endl;
+    std::cout << "[Server P] Successfully bought <number of shares> shares of "<<" and updated "<<username<<"’s portfolio. " << std::endl;
 }
 
 void handle_sell(const std::string& username, const std::string& stock, int quantity, double price, const std::string& confirm, int sockfd) {
@@ -124,7 +124,7 @@ void handle_position(const std::string& username, int udp_sock) {
         udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "ERR invalid username");
         return;
     }
-
+	std::cout << "[Server P] Received a position request from the main server for Member: "<<username << std::endl;
     auto it = portfolios.find(username);
     if (it == portfolios.end() || it->second.empty()) {
         udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "ERR no data");
@@ -140,9 +140,9 @@ void handle_position(const std::string& username, int udp_sock) {
                  << " @ avg " << holding.avg_price << "\n";
     }
 
-    std::cout << "[Server P] Sent position for user: " << username << std::endl;
+    std::cout << "[Server P] Finished sending the gain and portfolio of " << username<<" to the main server. " << std::endl;
     udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, response.str());
-	std::cout << response.str() << std::endl;
+	//std::cout << response.str() << std::endl;
 }
 
 int main() {
