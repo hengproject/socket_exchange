@@ -128,18 +128,18 @@ UserMap loadPortfolios(const std::string& filename) {
 // 查询用户持仓
 void handle_position(const std::string& username, int udp_sock) {
     if (username.empty()) {
-        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "ERR position invalid username");
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "ERR invalid username");
         return;
     }
 
     auto it = portfolios.find(username);
     if (it == portfolios.end() || it->second.empty()) {
-        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "position no data");
+        udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, "ERR no data");
         return;
     }
 
     std::ostringstream response;
-    response << "OK position\n";
+    response << "OK";
 
     for (const auto& pair : it->second) {
         const StockHolding& holding = pair.second;
@@ -149,6 +149,7 @@ void handle_position(const std::string& username, int udp_sock) {
 
     std::cout << "[Server P] Sent position for user: " << username << std::endl;
     udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_M_UDP, response.str());
+	std::cout << response.str() << std::endl;
 }
 
 int main() {

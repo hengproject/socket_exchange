@@ -116,8 +116,10 @@ ServerQ  -> ServerM : S1 105.0
 ServerM  -> ServerQ : quote S2
 ServerQ  -> ServerM : S2 55.0
 ServerM  -> Client  : OK S1 10 @ avg 100.0 | P/L = 50.00\nS2 5 @ avg 50.0 | P/L = 25.00\n<username>’s current profit is 75.00
+```
 
-
+```
+ServerM  -> Client: POSITION,OK,DATA / POSITION,ERR,DATA
 ```
 
 f. Any idiosyncrasy of your project. It should specify under what conditions the project fails, if any.

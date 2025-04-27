@@ -44,7 +44,12 @@ void QuoteResponseHandler(const std::string& status, const std::string& content)
 }
 
 void PositionResponseHandler(const std::string& status, const std::string& content) {
-
+    std::cout << "[Client] Received the response from the main server using TCP over port <client port number>." << std::endl;
+	if (status == "OK") {
+        std::cout << content << std::endl;
+    } else if (status == "ERROR") {
+        std::cout << username <<"’s current profit is 0.0. "<< std::endl;
+    }
     return;
 }
 
