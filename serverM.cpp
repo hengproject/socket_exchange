@@ -43,7 +43,7 @@ void handlePosition(int client_fd, int udp_sock) {
         tcp_send_string(client_fd, "POSITION,ERR");
         return;
     }
-
+	std::cout << "[Server M] Received user’s portfolio from server P using UDP over "<< PORT_SERVER_M_UDP << std::endl;
     std::string replyP = reply.value();
     std::ostringstream response;
     double total_profit = 0.0;
@@ -123,12 +123,14 @@ void handleQuote(int client_fd, int udp_sock,const std::string& stockName) {
 }
 
 void handleBuy(int client_fd, int udp_sock, const std::string& stockName, int shares) {
-    // std::cout << stockName << std::endl;
+	std::string username = client_fd_to_user[client_fd];
+    std::cout << "[Server M] Received a buy request from member " <<username<<" using TCP over port "<< PORT_SERVER_M_TCP <<". " << std::endl;
 	if (stockName.empty() || shares <= 0) {
     	tcp_send_string(client_fd, MSG_BUY_INVALID);
     	return;
     }
 	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stockName);
+	std::cout << "[Server M] Sent the quote request to server Q." << std::endl;
     Optional<std::string> price_resp = udp_recv_string(udp_sock);
     if (!price_resp.has_value()) {
         tcp_send_string(client_fd, MSG_BUY_PRICE_FAIL);
@@ -143,6 +145,7 @@ void handleBuy(int client_fd, int udp_sock, const std::string& stockName, int sh
 	}
 	//confirm
 	tcp_send_string(client_fd, "BUY,CONFIRM,"+stockName+","+std::to_string(price));
+	std::cout << "[Server M] Sent the buy confirmation to the client. "<<std::endl;
 	auto maybe_msg = tcp_recv_string(client_fd);
     if (!maybe_msg.has_value()) {
         close(client_fd);
@@ -151,13 +154,17 @@ void handleBuy(int client_fd, int udp_sock, const std::string& stockName, int sh
     std::string confirm = maybe_msg.value();
 	std::ostringstream final_response;
 	if (confirm == "Y" || confirm == "y") {
+		std::cout << "[Server M] Buy approved. " <<std::endl;
 		std::ostringstream msg_to_P;
     	msg_to_P << "buy " << client_fd_to_user[client_fd] << " " << stockName << " " << shares << " " << price;
+		std::cout << "[Server M] Forwarded the buy confirmation response to Server P. " << std::endl;
     	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_P, msg_to_P.str());
 		udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "advance " + stockName);
     	std::cout << "[Server M] Sent a time forward request for "<<stockName<<"." << std::endl;
 		final_response <<"BUY,OK,"<<stockName<<","<<price<<","<<shares;
+		std::cout << "[Server M] Forwarded the buy result to the client. " << std::endl;
 	}else{
+		std::cout << "[Server M] Buy denied.  " <<std::endl;
 		final_response <<"BUY,ERROR";
 	}
 
@@ -170,7 +177,7 @@ void handleSell(int client_fd, int udp_sock, const std::string& stockName, int s
     std::cout << "[Server M] Received a sell request from member " << username
               << " using TCP over port " << PORT_SERVER_M_TCP << "." << std::endl;
 
-	std::cout << stockName << std::endl;
+	//std::cout << stockName << std::endl;
 	// get price of Q
 	udp_send_string(udp_sock, LOCALHOST, PORT_SERVER_Q, "quote " + stockName);
     std::cout << "[Server M] Sent the quote request to server Q." << std::endl;
@@ -186,7 +193,7 @@ void handleSell(int client_fd, int udp_sock, const std::string& stockName, int s
     double price;
     price_iss >> stock_reply >> price;
 
-	std::cout <<price << std::endl;
+	//std::cout <<price << std::endl;
 	//chaeck enough shares
     std::ostringstream check_msg;
     check_msg << "check " << username << " " << stockName << " " << shares;
