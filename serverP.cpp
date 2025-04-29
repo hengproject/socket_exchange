@@ -70,7 +70,6 @@ bool hasSufficientShares(const std::string& username,
             && stockIt->second.quantity >= quantity);
 }
 
-// 打印当前 portfolios 内容
 void printPortfolios(const UserMap& portfolios) {
     for (const auto& user_pair : portfolios) {
         const std::string& username = user_pair.first;
@@ -93,7 +92,7 @@ UserMap loadPortfolios(const std::string& filename) {
 
     while (std::getline(infile, line)) {
         std::string t = trim(line);
-        if (t.empty()) continue;            // 跳过空行
+        if (t.empty()) continue;            // skip
 
         std::istringstream iss(t);
         std::vector<std::string> parts;
@@ -101,18 +100,18 @@ UserMap loadPortfolios(const std::string& filename) {
         while (iss >> tok) parts.push_back(tok);
 
         if (parts.size() == 1) {
-            // 只有用户名
+            // username only
             currentUser = parts[0];
             data[currentUser] = Portfolio();
         } else if (parts.size() == 3) {
-            // 股票 持仓数 平均价
+            // stock shares price
             StockHolding h;
             h.stock     = parts[0];
             h.quantity  = std::stoi(parts[1]);
             h.avg_price = std::stod(parts[2]);
             data[currentUser][h.stock] = h;
         } else {
-            std::cerr << "[loadPortfolios] 无法识别的行: " << line << std::endl;
+            std::cerr << "[loadPortfolios] can not recoginze : " << line << std::endl;
         }
     }
     return data;

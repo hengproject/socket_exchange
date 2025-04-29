@@ -36,11 +36,11 @@ namespace serverM {
 
     std::string encryptPassword(const std::string& password);
 
-    // 核心流程处理函数
+    // handlers
     void handle_single_client(int client_fd, int udp_sock);
     void handle_phase3_commands(int client_fd, int udp_sock, const std::string& username);
 
-    // 指令处理封装函数
+    // command_handlers
     void handle_quote_command(int client_fd, int udp_sock, const std::string& command);
     void handle_buy_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity);
     void handle_sell_command(int client_fd, int udp_sock, const std::string& username, const std::string& stock, int quantity);

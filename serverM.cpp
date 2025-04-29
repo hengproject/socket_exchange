@@ -17,7 +17,7 @@ namespace serverM {
     std::unordered_map<int, std::string> client_fd_to_user;
 }
 
-// 密码加密函数
+// pwd encrypt
 std::string serverM::encryptPassword(const std::string& password) {
     std::string encrypted = password;
     for (char& c : encrypted) {
@@ -49,7 +49,7 @@ void handlePosition(int client_fd, int udp_sock) {
     double total_profit = 0.0;
 
     if (replyP.substr(0, 2) == "OK") {
-        std::istringstream iss(replyP.substr(2));  // 去掉OK，继续处理下面每一行
+        std::istringstream iss(replyP.substr(2));  // remove ok
         std::string line;
         while (std::getline(iss, line)) {
             if (line.empty()) continue;
@@ -236,7 +236,7 @@ void handleSell(int client_fd, int udp_sock, const std::string& stockName, int s
 }
 
 
-// 登录处理逻辑封装
+// login
 void serverM::handle_single_client(int client_fd, int udp_sock) {
     a:
     auto maybe_msg = tcp_recv_string(client_fd);

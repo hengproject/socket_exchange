@@ -46,7 +46,7 @@ bool startsWith(const std::string& str, const std::string& prefix) {
 // ==============================
 //
 
-// TCP Server: 创建监听 socket 并绑定本地端口
+// TCP Server: create listener
 inline int create_tcp_server_socket(const std::string& ip, int port) {
     // 创建 socket，AF_INET -> IPv4，SOCK_STREAM -> TCP
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -77,7 +77,7 @@ inline int create_tcp_server_socket(const std::string& ip, int port) {
     return sockfd;
 }
 
-// TCP Client: 创建 socket 并连接 serverM
+// TCP Client: ceate socket
 inline int create_tcp_client_socket(const std::string& ip, int port) {
     // create a socket, AF_INET -> IPV4 SOCKET_STREAM -> TCP
     // when using SOCK_STREAM or SOCK_DGRAM, you can just set the protocol to 0
@@ -103,7 +103,7 @@ inline int create_tcp_client_socket(const std::string& ip, int port) {
     return sockfd;
 }
 
-// TCP 接收字符串数据（支持 null 终止），封装为 Optional
+// TCP recv allow null
 inline Optional<std::string> tcp_recv_string(int sockfd, size_t max_len = 512) {
     char* buffer = new char[max_len];
     std::memset(buffer, 0, max_len);
@@ -120,7 +120,7 @@ inline Optional<std::string> tcp_recv_string(int sockfd, size_t max_len = 512) {
     return Optional<std::string>(result);
 }
 
-// TCP 发送字符串数据
+// TCP send string
 inline bool tcp_send_string(int sockfd, const std::string& msg) {
     int sent = send(sockfd, msg.c_str(), msg.size(), 0);
     if (sent < 0) return false;
@@ -133,7 +133,7 @@ inline bool tcp_send_string(int sockfd, const std::string& msg) {
 // ==============================
 //
 
-// UDP Server: 创建 socket 并绑定端口
+// UDP Server: create socket
 inline int create_udp_server_socket(const std::string& ip, int port) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
@@ -155,7 +155,7 @@ inline int create_udp_server_socket(const std::string& ip, int port) {
     return sockfd;
 }
 
-// UDP 发送字符串数据到指定地址
+// UDP send string
 inline void udp_send_string(int sockfd, const std::string& ip, int port, const std::string& message) {
     sockaddr_in dest{};
     dest.sin_family = AF_INET;
@@ -165,7 +165,7 @@ inline void udp_send_string(int sockfd, const std::string& ip, int port, const s
     sendto(sockfd, message.c_str(), message.size(), 0, (sockaddr*)&dest, sizeof(dest));
 }
 
-// UDP 接收字符串数据（封装为 Optional）
+// UDP recieve string
 inline Optional<std::string> udp_recv_string(int sockfd, size_t max_len = 512) {
     char* buffer = new char[max_len];
     std::memset(buffer, 0, max_len);

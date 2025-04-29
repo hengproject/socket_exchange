@@ -90,7 +90,7 @@ void BuyResponseHandler(const std::string& status, const std::string& content) {
 
 void SellResponseHandler(const std::string& status, const std::string& content) {
     if (status == "OK") {
-        // content格式: username,number_of_shares,stock_name
+        // content: username,number_of_shares,stock_name
         std::istringstream iss(content);
         std::string username, number_of_shares, stock_name;
         getline(iss, username, ',');
@@ -108,7 +108,7 @@ void SellResponseHandler(const std::string& status, const std::string& content) 
         else if (content == "stock name does not exist") {
             std::cout << "[Client] Error: stock name does not exist. Please check again." << std::endl;
         } else {
-            // content格式: username does not have enough shares of ,stock_name
+            // content format: username does not have enough shares of ,stock_name
             std::istringstream iss(content);
             std::string msg, stock_name;
             getline(iss, msg, ',');
@@ -118,7 +118,7 @@ void SellResponseHandler(const std::string& status, const std::string& content) 
 		new_req();
 
     } else if (status == "CONFIRM") {
-        // content格式: stock_name,current_price
+        // content format: stock_name,current_price
         std::istringstream iss(content);
         std::string stock_name, current_price;
         getline(iss, stock_name, ',');
@@ -151,25 +151,24 @@ int main() {
     std::cout << client::LOGIN_PROMPT << std::endl;
 
     while (true) {
-        // for test
-       //std::string username, password;
-       //std::cout << client::PROMPT_USERNAME;
-       //std::getline(std::cin, username);
-       //std::cout << client::PROMPT_PASSWORD;
-       //std::getline(std::cin, password);
 
-       //if (username.empty() || password.empty()) {
-       //    std::cerr << "[Client] Username and password must not be empty." << std::endl;
-       //    continue;
-       //}
-       //if (username.length() > 51 || password.length() > 51) {
-       //    std::cerr << "[Client] Username/password too long." << std::endl;
-       //    continue;
-       //}
+       std::string username, password;
+       std::cout << client::PROMPT_USERNAME;
+       std::getline(std::cin, username);
+       std::cout << client::PROMPT_PASSWORD;
+       std::getline(std::cin, password);
+       if (username.empty() || password.empty()) {
+           std::cerr << "[Client] Username and password must not be empty." << std::endl;
+           continue;
+       }
+       if (username.length() > 51 || password.length() > 51) {
+          std::cerr << "[Client] Username/password too long." << std::endl;
+          continue;
+       }
 
-       //std::string message = username + "," + password;
-        username="*";
-        std::string message = "*,*";
+       std::string message = username + "," + password;
+        //username="*";
+        //std::string message = "*,*";
         tcp_send_string(sockfd, message);
 
         auto reply = tcp_recv_string(sockfd);
@@ -197,10 +196,10 @@ int getClientPort(int sockfd) {
 
     if (getsockname(sockfd, (struct sockaddr*)&addr, &addr_len) == -1) {
         perror("getsockname failed");
-        return -1; // 出错时返回 -1
+        return -1;
     }
 
-    return ntohs(addr.sin_port); // 转成主机字节序
+    return ntohs(addr.sin_port);
 }
 
 bool validateInput(const std::string& input) {

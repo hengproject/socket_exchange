@@ -1,10 +1,12 @@
-# KEEP REPOSITORY PRIVATE BEFORE DDL
+REPOSITORY WAS KEPT PRIVATE BEFORE DDL
 
 In the README file, please include:   
 a. Your Full Name as given in the class list
-Suheng Yang
+--------------
+
 b. Your Student ID
-8232100684
+-----------
+
 c. What you have done in the assignment   
 - Phase 1:
     - Implemented server boot-up procedures for serverM, serverA, serverP, and serverQ.
@@ -71,7 +73,6 @@ QUOTE,ERROR,<stock name>
 
 ##### BUY
 ```
-
 Client->>ServerM: buy S1 10
 ServerM->>ServerQ: quote S1
 ServerQ-->>ServerM: S1 102.5
@@ -156,3 +157,5 @@ functions and where they're from. (Also identify this with a comment in the sour
 h. Which version of Ubuntu (only the Ubuntu versions that we provided to you) are you using? 
 
 studentVM
+
+
